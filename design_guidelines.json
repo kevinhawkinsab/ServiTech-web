@@ -1,0 +1,152 @@
+{
+  "identity": {
+    "app_name": "Servicio Técnico",
+    "tone": "Technical, Precise, Efficient, Modern",
+    "aesthetic": "Swiss Minimalist / Industrial Tech",
+    "primary_color": "#f35027",
+    "keywords": ["Compact", "Minimalist", "High-Contrast", "Field-Ready"]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight",
+      "h2": "text-3xl font-bold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "body_lg": "text-lg leading-relaxed",
+      "body": "text-base leading-normal",
+      "small": "text-sm font-medium text-muted-foreground",
+      "tiny": "text-xs font-medium uppercase tracking-wider"
+    },
+    "rules": [
+      "Use Manrope for all headings to give a technical/industrial feel.",
+      "Use Inter for data tables and body text for maximum legibility.",
+      "Avoid using Inter for Headings (h1-h3).",
+      "Headings > 32px must use tracking-tight."
+    ]
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#f35027",
+        "foreground": "#ffffff",
+        "hover": "#d9421e",
+        "active": "#b93416"
+      },
+      "secondary": {
+        "DEFAULT": "#f4f4f5",
+        "foreground": "#18181b"
+      },
+      "background": "#ffffff",
+      "foreground": "#09090b",
+      "muted": {
+        "DEFAULT": "#f4f4f5",
+        "foreground": "#71717a"
+      },
+      "accent": {
+        "DEFAULT": "#f4f4f5",
+        "foreground": "#18181b"
+      },
+      "destructive": {
+        "DEFAULT": "#ef4444",
+        "foreground": "#ffffff"
+      },
+      "border": "#e4e4e7",
+      "input": "#e4e4e7",
+      "ring": "#f35027"
+    },
+    "rules": [
+      "Primary color #f35027 is for high-priority actions only (CTAs, Active States).",
+      "Do NOT use gradients for backgrounds. Use flat colors or subtle noise textures.",
+      "Text contrast must be WCAG AA compliant (4.5:1).",
+      "Use 'Zinc' scale for neutrals (Slate is too blue, Gray is too warm). Zinc is technical."
+    ]
+  },
+  "layout": {
+    "spacing_system": "Tailwind Scale (p-4, p-6, p-8, p-12)",
+    "container_width": "max-w-7xl mx-auto",
+    "sidebar": {
+      "width": "w-64",
+      "collapsed_width": "w-16",
+      "behavior": "Collapsible on desktop, Drawer on mobile"
+    },
+    "bento_grid": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-4 gap-4",
+      "kpi_cards": "col-span-1",
+      "charts_main": "col-span-2 md:col-span-3 lg:col-span-2 row-span-2",
+      "list_feed": "col-span-1 md:col-span-2 lg:col-span-1 row-span-2"
+    },
+    "rules": [
+      "Mobile-first: Always start with grid-cols-1.",
+      "High Density Mode: Use gap-4 for dashboards to keep data compact.",
+      "Card Styling: Flat background, 1px border-zinc-200, no shadow or very subtle shadow-sm.",
+      "Borders: Use borders to define structure instead of shadows (Swiss Style)."
+    ]
+  },
+  "components": {
+    "library": "shadcn-vue",
+    "icons": "lucide-vue-next",
+    "charts": "Apache ECharts",
+    "calendar": "FullCalendar (Vue adapter)",
+    "signature": "vue-signature-pad or similar wrapper",
+    "styles": {
+      "radius": "rounded-md",
+      "button": "font-medium text-sm h-9 px-4 py-2",
+      "card": "border bg-card text-card-foreground shadow-sm",
+      "input": "h-9 text-sm focus-visible:ring-1 focus-visible:ring-primary"
+    },
+    "custom_instructions": [
+      "Use 'sonner' for toasts.",
+      "Forms: Use zod for validation.",
+      "Tables: Compact row height (h-10) for technical data.",
+      "Dialogs: Use for 'New Appointment' and 'Quick Actions'."
+    ]
+  },
+  "functionalities": {
+    "dashboard": {
+      "layout": "Bento Grid",
+      "kpis": ["Total Appointments", "Pending Visits", "Completed Today", "Technician Status"],
+      "widgets": ["Doughnut Chart (Status Distribution)", "Line Chart (Weekly Activity)", "Upcoming Visits List"]
+    },
+    "appointments": {
+      "views": ["Table View (Dense)", "Calendar View (Month/Week/Day)"],
+      "features": ["Drag & Drop Rescheduling", "Quick Filters (Status, Technician)", "Search"]
+    },
+    "service_record": {
+      "type": "Multi-step Form or Long Form with Scroll Spy",
+      "sections": ["Client Info", "Equipment Details", "Diagnosis", "Spare Parts", "Photos", "Signature"],
+      "signature": "Digital Signature Pad integration"
+    },
+    "history": {
+      "actions": ["View Details", "Download PDF", "Email Report"]
+    }
+  },
+  "images": {
+    "login_background": "https://images.unsplash.com/photo-1765021690423-b87c855e21eb?q=85&w=1920&auto=format&fit=crop",
+    "placeholder_technician": "https://images.unsplash.com/photo-1765021691270-be6f433a25e1?q=80&w=600&auto=format&fit=crop",
+    "empty_state_illustration": "Use abstract geometric shapes or subdued technical icons."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text on #f35027 has high contrast (White/Black).",
+    "focus_states": "Visible focus rings (ring-2 ring-primary ring-offset-2).",
+    "aria_labels": "Required for all icon-only buttons."
+  },
+  "testing": {
+    "attribute": "data-testid",
+    "format": "kebab-case",
+    "examples": ["login-submit-button", "appointment-card-123", "nav-link-dashboard"]
+  },
+  "universal_guidelines": [
+    "Do NOT use gradients for buttons or backgrounds unless requested.",
+    "Do NOT use 'Inter' for headings.",
+    "Do NOT use 'AI' emojis in UI text.",
+    "Use 'Zinc' (Neutral) colors for borders and backgrounds.",
+    "Primary color usage should be < 10% of the screen (Action items only).",
+    "Always use Vue Composition API (<script setup>).",
+    "Export components using named exports where possible, or default for pages.",
+    "Ensure responsiveness on Mobile (Sidebar becomes Drawer)."
+  ]
+}
