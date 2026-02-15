@@ -75,14 +75,16 @@ const openPreview = (visita) => {
 
 const downloadPDF = async (visita) => {
   selectedVisita.value = visita
-  
-  // Wait for modal to render
-  await new Promise(resolve => setTimeout(resolve, 100))
   showPreview.value = true
-  await new Promise(resolve => setTimeout(resolve, 300))
+  
+  // Wait for modal to render and Vue to update DOM
+  await new Promise(resolve => setTimeout(resolve, 500))
   
   const element = document.getElementById('pdf-content')
-  if (!element) return
+  if (!element) {
+    console.error('PDF content element not found')
+    return
+  }
   
   const opt = {
     margin: 10,
@@ -94,11 +96,10 @@ const downloadPDF = async (visita) => {
   
   try {
     await html2pdf().set(opt).from(element).save()
+    console.log('PDF generado:', visita.ordenId)
   } catch (error) {
     console.error('Error generando PDF:', error)
   }
-  
-  showPreview.value = false
 }
 
 const formatCurrency = (value) => {
