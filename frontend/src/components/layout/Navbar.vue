@@ -8,7 +8,7 @@ import {
   User,
   ChevronDown
 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   sidebarCollapsed: Boolean
@@ -19,6 +19,7 @@ const emit = defineEmits(['toggle-sidebar', 'toggle-mobile-menu'])
 const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
+const userMenuRef = ref(null)
 
 const roleLabels = {
   admin: 'Administrador',
@@ -27,9 +28,27 @@ const roleLabels = {
 }
 
 const handleLogout = () => {
+  showUserMenu.value = false
   authStore.logout()
   router.push({ name: 'login' })
 }
+
+// Close menu when clicking outside
+const handleClickOutside = (event) => {
+  const menuEl = document.querySelector('[data-testid="user-menu-dropdown"]')
+  const buttonEl = document.querySelector('[data-testid="user-menu-button"]')
+  if (menuEl && !menuEl.contains(event.target) && !buttonEl?.contains(event.target)) {
+    showUserMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
