@@ -77,31 +77,40 @@ const handleLogout = () => {
         </button>
 
         <!-- Dropdown -->
-        <div
-          v-if="showUserMenu"
-          class="absolute right-0 mt-2 w-48 bg-white border border-zinc-200 rounded-md shadow-lg py-1"
-          @mouseleave="showUserMenu = false"
+        <Transition
+          enter-active-class="transition ease-out duration-100"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition ease-in duration-75"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
         >
-          <div class="px-4 py-2 border-b border-zinc-100">
-            <p class="text-sm font-medium">{{ authStore.user?.name }}</p>
-            <p class="text-xs text-zinc-500">{{ authStore.user?.email }}</p>
+          <div
+            v-if="showUserMenu"
+            class="absolute right-0 mt-2 w-48 bg-white border border-zinc-200 rounded-md shadow-lg py-1 z-50"
+            data-testid="user-menu-dropdown"
+          >
+            <div class="px-4 py-2 border-b border-zinc-100">
+              <p class="text-sm font-medium">{{ authStore.user?.name }}</p>
+              <p class="text-xs text-zinc-500">{{ authStore.user?.email }}</p>
+            </div>
+            <button
+              class="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+              data-testid="profile-button"
+            >
+              <User class="w-4 h-4" />
+              Perfil
+            </button>
+            <button
+              class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              @click="handleLogout"
+              data-testid="logout-button"
+            >
+              <LogOut class="w-4 h-4" />
+              Cerrar Sesión
+            </button>
           </div>
-          <button
-            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
-            data-testid="profile-button"
-          >
-            <User class="w-4 h-4" />
-            Perfil
-          </button>
-          <button
-            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            @click="handleLogout"
-            data-testid="logout-button"
-          >
-            <LogOut class="w-4 h-4" />
-            Cerrar Sesión
-          </button>
-        </div>
+        </Transition>
       </div>
     </div>
   </header>
