@@ -59,26 +59,26 @@ const filteredCitas = computed(() => {
     // Search
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase()
-      const matchSearch = 
+      const matchSearch =
         cita.asunto.toLowerCase().includes(query) ||
         cita.clienteNombre.toLowerCase().includes(query) ||
         cita.id.toLowerCase().includes(query)
       if (!matchSearch) return false
     }
-    
+
     // Fecha
     if (filterFechaInicio.value && cita.fecha < filterFechaInicio.value) return false
     if (filterFechaFin.value && cita.fecha > filterFechaFin.value) return false
-    
+
     // Técnico
     if (filterTecnico.value && cita.tecnicoId !== filterTecnico.value) return false
-    
+
     // Tipo
     if (filterTipo.value && cita.tipo !== filterTipo.value) return false
-    
+
     // Estado
     if (filterEstado.value && cita.estado !== filterEstado.value) return false
-    
+
     return true
   })
 })
@@ -134,7 +134,7 @@ const clearFilters = () => {
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 class="font-heading text-lg font-bold text-zinc-900">Gestión de Citas</h1>
-        <p class="text-sm text-zinc-500">Administra todas las citas y visitas programadas</p>
+        <p class="text-xs text-zinc-500">Administra todas las citas y visitas programadas</p>
       </div>
       <div class="flex gap-2">
         <Button @click="() => router.push({ name: 'calendario' })" variant="outline">
@@ -149,50 +149,67 @@ const clearFilters = () => {
     </div>
 
     <!-- Filters -->
-    <Card>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-        <div class="lg:col-span-2 relative">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <Input
-            v-model="searchQuery"
-            placeholder="Buscar por ID, asunto o cliente..."
-            class="pl-9"
-            data-testid="search-input"
-          />
+    <Card class="border-none shadow-sm overflow-visible bg-white">
+      <div class="p-1">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+
+          <div class="lg:col-span-5 relative group">
+            <Search
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
+            <Input v-model="searchQuery" placeholder="Buscar por ID, asunto o cliente..."
+              class="pl-10 bg-zinc-50 border-zinc-100 focus:bg-white transition-all rounded-xl"
+              data-testid="search-input" />
+          </div>
+
+          <div class="lg:col-span-7 flex flex-col sm:flex-row items-center gap-2">
+            <div class="flex items-center gap-2 w-full">
+              <div class="relative w-full">
+                <Calendar
+                  class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+                <Input v-model="filterFechaInicio" type="date"
+                  class="pl-9 bg-zinc-50 border-zinc-100 rounded-xl text-xs sm:text-sm"
+                  data-testid="filter-fecha-inicio" />
+              </div>
+              <span class="text-zinc-400 text-xs font-bold uppercase tracking-widest">al</span>
+              <div class="relative w-full">
+                <Calendar
+                  class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+                <Input v-model="filterFechaFin" type="date"
+                  class="pl-9 bg-zinc-50 border-zinc-100 rounded-xl text-xs sm:text-sm"
+                  data-testid="filter-fecha-fin" />
+              </div>
+            </div>
+          </div>
         </div>
-        <Input
-          v-model="filterFechaInicio"
-          type="date"
-          placeholder="Fecha inicio"
-          data-testid="filter-fecha-inicio"
-        />
-        <Input
-          v-model="filterFechaFin"
-          type="date"
-          placeholder="Fecha fin"
-          data-testid="filter-fecha-fin"
-        />
-        <Select
-          v-model="filterTecnico"
-          :options="tecnicosOptions"
-          data-testid="filter-tecnico"
-        />
-        <Select
-          v-model="filterTipo"
-          :options="tiposOptions"
-          data-testid="filter-tipo"
-        />
-      </div>
-      <div class="flex items-center gap-3 mt-3">
-        <Select
-          v-model="filterEstado"
-          :options="estadosOptions"
-          class="w-48"
-          data-testid="filter-estado"
-        />
-        <Button variant="ghost" size="sm" @click="clearFilters">
-          Limpiar filtros
-        </Button>
+
+        <div class="h-px bg-zinc-100 my-4"></div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+
+            <div class="w-full sm:w-48">
+              <Select v-model="filterTecnico" :options="tecnicosOptions" placeholder="Todos los técnicos"
+                class="rounded-lg bg-white border-zinc-200 text-sm" data-testid="filter-tecnico" />
+            </div>
+
+            <div class="w-full sm:w-48">
+              <Select v-model="filterTipo" :options="tiposOptions" placeholder="Tipo de servicio"
+                class="rounded-lg bg-white border-zinc-200 text-sm" data-testid="filter-tipo" />
+            </div>
+
+            <div class="w-full sm:w-40">
+              <Select v-model="filterEstado" :options="estadosOptions" placeholder="Estado"
+                class="rounded-lg bg-white border-zinc-200 text-sm" data-testid="filter-estado" />
+            </div>
+          </div>
+
+          <Button variant="ghost" size="sm" @click="clearFilters"
+            class="text-zinc-400 hover:text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg transition-all text-xs font-bold uppercase tracking-tight">
+            <FilterX class="w-4 h-4 mr-2" />
+            Limpiar filtros
+          </Button>
+        </div>
+
       </div>
     </Card>
 
@@ -213,12 +230,8 @@ const clearFilters = () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-zinc-100">
-            <tr
-              v-for="cita in filteredCitas"
-              :key="cita.id"
-              class="hover:bg-zinc-50 transition-colors"
-              :data-testid="`cita-row-${cita.id}`"
-            >
+            <tr v-for="cita in filteredCitas" :key="cita.id" class="hover:bg-zinc-50 transition-colors"
+              :data-testid="`cita-row-${cita.id}`">
               <td class="py-3 px-4">
                 <span class="font-mono text-sm text-zinc-900">{{ cita.id }}</span>
               </td>
@@ -242,18 +255,12 @@ const clearFilters = () => {
               </td>
               <td class="py-3 px-4">
                 <div class="flex items-center gap-1">
-                  <button
-                    class="p-1.5 hover:bg-zinc-100 rounded transition-colors"
-                    @click="openEditCita(cita)"
-                    :data-testid="`edit-${cita.id}`"
-                  >
+                  <button class="p-1.5 hover:bg-zinc-100 rounded transition-colors" @click="openEditCita(cita)"
+                    :data-testid="`edit-${cita.id}`">
                     <Pencil class="w-4 h-4 text-zinc-500" />
                   </button>
-                  <button
-                    class="p-1.5 hover:bg-red-50 rounded transition-colors"
-                    @click="handleDeleteCita(cita.id)"
-                    :data-testid="`delete-${cita.id}`"
-                  >
+                  <button class="p-1.5 hover:bg-red-50 rounded transition-colors" @click="handleDeleteCita(cita.id)"
+                    :data-testid="`delete-${cita.id}`">
                     <Trash2 class="w-4 h-4 text-red-500" />
                   </button>
                 </div>
@@ -269,10 +276,6 @@ const clearFilters = () => {
     </Card>
 
     <!-- Modal Nueva/Editar Cita -->
-    <CitaModal
-      v-model="showCitaModal"
-      :cita="selectedCita"
-      @save="handleSaveCita"
-    />
+    <CitaModal v-model="showCitaModal" :cita="selectedCita" @save="handleSaveCita" />
   </div>
 </template>

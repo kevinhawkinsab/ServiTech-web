@@ -16,7 +16,11 @@ import {
   PenTool,
   Plus,
   Trash2,
-  Save
+  Save,
+  ChevronLeft,
+  Calendar,
+  Clock,
+  Info
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -31,34 +35,25 @@ const tiposOptions = computed(() =>
 const tecnicosOptions = computed(() =>
   visitasStore.tecnicos.map(t => ({ value: t.id, label: t.nombre }))
 )
-// Form data (con los campos solicitados)
-const form = ref({
-  // A. Detalle de la Visita
-  ordenId: '',            // mostrado (computed)
-  tecnico: authStore.user?.name || '', // A2 técnico (input text)
-  fechaAsignacion: new Date().toISOString().split('T')[0], // A3 date
-  horaVisita: '',        // A4 time
-  tipoVisita: '',        // A5 text
-  solicitud: '',         // A6 text
 
-  // B. Datos del Cliente
+const form = ref({
+  ordenId: '',
+  tecnico: authStore.user?.name || '',
+  fechaAsignacion: new Date().toISOString().split('T')[0],
+  horaVisita: new Date().toISOString().split('T')[1].substring(0, 5),
+  tipoVisita: '',
+  solicitud: '',
   clienteNombre: '',
   clienteTelefono: '',
   clienteContacto: '',
   clienteTipo: '',
-
-  // C. Datos de Inspección
   direccion: '',
   descripcionProblema: '',
-  horaEntrada: '',
-  horaSalida: '',
-
-  // D. Resultado de la visita
+  horaEntrada: new Date().toISOString().split('T')[1].substring(0, 5),
+  horaSalida: new Date().toISOString().split('T')[1].substring(0, 5),
   resultadoVisita: '',
   recomendaciones: '',
   detallesFacturacion: '',
-
-  // Inventario y firmas (mantener)
   inventario: [],
   subtotal: 0,
   iva: 0,
@@ -67,7 +62,6 @@ const form = ref({
   firmaTecnico: null
 })
 
-// Orden id generado o recuperado
 const ordenId = computed(() => {
   if (route.params.id) {
     const visita = visitasStore.getVisitaById(route.params.id)
@@ -76,16 +70,14 @@ const ordenId = computed(() => {
   return visitasStore.generateOrdenId()
 })
 
-// Inicializar ordenId en form (reactivo)
 form.value.ordenId = ordenId.value
 
-// Inventario management (sin cambios funcionales)
 const addInventarioItem = () => {
   form.value.inventario.push({
-    item: '',
+    descripcion: '',
     cantidad: 1,
-    precioUnit: 0,
-    total: 0
+    modelo: '',
+    serie: '',
   })
 }
 
@@ -106,14 +98,12 @@ const calculateTotals = () => {
   form.value.total = form.value.subtotal + form.value.iva
 }
 
-// Firma pads (mantener)
 const clienteCanvasRef = ref(null)
 const tecnicoCanvasRef = ref(null)
 let clienteSignaturePad = null
 let tecnicoSignaturePad = null
 
 onMounted(() => {
-  // Initialize signature pads
   if (clienteCanvasRef.value) {
     clienteSignaturePad = new SignaturePad(clienteCanvasRef.value, {
       backgroundColor: 'rgb(255, 255, 255)',
@@ -128,24 +118,15 @@ onMounted(() => {
     })
   }
 
-  // Load existing visita if editing
   if (route.params.id) {
     const visita = visitasStore.getVisitaById(route.params.id)
     if (visita) {
-      // Map visitante fields into nuestro form. Si el objeto tiene campos con otros nombres,
-      // esta asignación los volcará directamente; de lo contrario asigna de forma conservadora.
-      form.value = {
-        ...form.value,
-        ...visita
-      }
+      form.value = { ...form.value, ...visita }
     }
   }
-
-  // asegurar ordenId actualizado
   form.value.ordenId = ordenId.value
 })
 
-// Limpiar firmas
 const clearClienteSignature = () => {
   clienteSignaturePad?.clear()
   form.value.firmaCliente = null
@@ -156,13 +137,11 @@ const clearTecnicoSignature = () => {
   form.value.firmaTecnico = null
 }
 
-// Watch para imprimir en consola cada vez que cambie el formulario
 watch(form, (newVal) => {
   console.log('Formulario actualizado:', JSON.parse(JSON.stringify(newVal)))
 }, { deep: true })
 
 const handleSubmit = () => {
-  // obtener firmas (si existen)
   if (clienteSignaturePad && !clienteSignaturePad.isEmpty()) {
     form.value.firmaCliente = clienteSignaturePad.toDataURL()
   }
@@ -170,7 +149,6 @@ const handleSubmit = () => {
     form.value.firmaTecnico = tecnicoSignaturePad.toDataURL()
   }
 
-  // imprimir en consola (al enviar)
   console.log('Formulario de visita técnica (submit):', JSON.parse(JSON.stringify(form.value)))
 
   if (route.params.id) {
@@ -181,281 +159,298 @@ const handleSubmit = () => {
 
   router.push({ name: 'historial' })
 }
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: 'CLP',
-    minimumFractionDigits: 0
-  }).format(value)
-}
 </script>
 
 <template>
-  <div class="space-y-4 max-w-5xl mx-auto" data-testid="registro-visita-page">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h1 class="font-heading text-lg font-bold text-zinc-900">Registro de Visita Técnica</h1>
-        <p class="text-sm text-zinc-500">Complete el formulario de la visita realizada</p>
+  <div class="min-h-screen bg-zinc-50/50 p-4 lg:p-8 w-full max-w-screen-2xl mx-auto" data-testid="registro-visita-page">
+    
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div class="flex items-center gap-4">
+        <Button variant="ghost" size="icon" @click="router.back()" class="rounded-full bg-white shadow-sm border border-zinc-200">
+          <ChevronLeft class="w-5 h-5 text-zinc-600" />
+        </Button>
+        <div>
+          <h1 class="text-2xl font-black text-zinc-900 tracking-tight">Registro de Visita Técnica</h1>
+          <div class="flex items-center gap-2 text-zinc-500 text-sm">
+            <span class="font-mono px-2 py-0.5 rounded text-primary font-bold">#{{ ordenId }}</span>
+            <span>•</span>
+            <p>Complete los detalles del servicio realizado</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <Button variant="outline" @click="router.back()" class="font-bold border-zinc-300">Descartar</Button>
+        <Button @click="handleSubmit" class="bg-zinc-900 text-white font-bold hover:bg-zinc-800" data-testid="submit-visita-btn">
+          <Save class="w-4 h-4 mr-2" />
+          Finalizar Servicio
+        </Button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+      
+      <div class="xl:col-span-8 space-y-8">
+        
+        <Card class="border-none shadow-sm overflow-hidden">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-6 border-b border-zinc-100 pb-4">
+              <div class="p-2.5 bg-zinc-900 rounded-xl">
+                <FileText class="w-5 h-5 text-white" />
+              </div>
+              <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-wider">Información General</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Técnico Responsable</label>
+                <Select v-model="form.tecnico" :options="tecnicosOptions" data-testid="visita-tecnico" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Fecha Programada</label>
+                <div class="relative">
+                  <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <Input v-model="form.fechaAsignacion" type="date" class="pl-10" data-testid="visita-fecha-asignacion" />
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Hora Estimada</label>
+                <div class="relative">
+                  <Clock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <Input v-model="form.horaVisita" type="time" class="pl-10" data-testid="visita-hora-visita" />
+                </div>
+              </div>
+              <div class="space-y-1.5 md:col-span-2 lg:col-span-1">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Tipo de Servicio</label>
+                <Select v-model="form.tipoVisita" :options="tiposOptions" placeholder="Seleccionar tipo..." data-testid="visita-tipo" />
+              </div>
+              <div class="md:col-span-2 space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Motivo de Solicitud</label>
+                <Input v-model="form.solicitud" placeholder="¿Qué solicitó el cliente?" data-testid="visita-solicitud" />
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card class="border-none shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-6 border-b border-zinc-100 pb-4">
+              <div class="p-2.5 bg-emerald-100 rounded-xl">
+                <Clipboard class="w-5 h-5 text-emerald-600" />
+              </div>
+              <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-wider">Hallazgos Técnicos</h2>
+            </div>
+
+            <div class="space-y-6">
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Descripción del Problema Detectado</label>
+                <textarea v-model="form.descripcionProblema" rows="3" 
+                  class="w-full rounded-sm border focus:ring-emerald-500/20 transition-all p-3 text-sm"
+                  placeholder="Detalle el estado actual del equipo o instalación..." data-testid="inspeccion-descripcion"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-6">
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Hora de Inicio</label>
+                  <Input v-model="form.horaEntrada" type="time" data-testid="inspeccion-hora-entrada" />
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Hora de Cierre</label>
+                  <Input v-model="form.horaSalida" type="time" data-testid="inspeccion-hora-salida" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card class="border-none shadow-sm bg-zinc-900 text-white">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="p-2.5 bg-white/10 rounded-xl">
+                <Info class="w-5 h-5 text-white" />
+              </div>
+              <h2 class="text-lg font-bold uppercase tracking-wider">Conclusión del Servicio</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-1.5">
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Resultado de visita</label>
+                <Input v-model="form.resultadoVisita" class="bg-white/5 border-white/10 text-white placeholder:text-zinc-500" 
+                  placeholder="Ej: Operativo / Pendiente repuesto" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Observaciones de Facturación</label>
+                <Input v-model="form.detallesFacturacion" class="bg-white/5 border-white/10 text-white placeholder:text-zinc-500" 
+                  placeholder="Indique si aplica cargos extra..." />
+              </div>
+              <div class="md:col-span-2 space-y-1.5">
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Recomendaciones al Cliente</label>
+                <textarea v-model="form.recomendaciones" rows="2" 
+                  class="w-full bg-white/5 border-white/10 rounded-xl p-3 text-sm focus:ring-emerald-500/50"
+                  placeholder="Sugerencias de mantenimiento..."></textarea>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div class="xl:col-span-4 space-y-8">
+        
+        <Card class="border-none shadow-sm sticky top-8">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-6 border-b border-zinc-100 pb-4">
+              <div class="p-2.5 bg-blue-100 rounded-xl">
+                <User class="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-wider">Datos del Cliente</h2>
+            </div>
+
+            <div class="space-y-5">
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Nombre / Razón Social</label>
+                <Input v-model="form.clienteNombre" placeholder="Juan Pérez o Empresa S.A." data-testid="cliente-nombre" />
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Teléfono</label>
+                  <Input v-model="form.clienteTelefono" placeholder="+56 9..." />
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Tipo</label>
+                  <Input v-model="form.clienteTipo" placeholder="Empresa/Particular" />
+                </div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Persona de Contacto</label>
+                <Input v-model="form.clienteContacto" placeholder="Nombre de quien recibe" />
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest ml-1">Dirección de Servicio</label>
+                <Input v-model="form.direccion" placeholder="Calle, Número, Ciudad" />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div class="xl:col-span-12">
+        <Card class="border-none shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6 border-b border-zinc-100 pb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-amber-100 rounded-xl">
+                  <Package class="w-5 h-5 text-amber-600" />
+                </div>
+                <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-wider">Materiales y Repuestos</h2>
+              </div>
+              <Button variant="outline" size="sm" @click="addInventarioItem" class="rounded-lg font-bold border-zinc-300">
+                <Plus class="w-4 h-4 mr-1.5" /> Agregar Item
+              </Button>
+            </div>
+
+            <div class="overflow-hidden border border-zinc-100 rounded-xl">
+              <table class="w-full text-left">
+                <thead class="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    <th class="p-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Descripción</th>
+                    <th class="p-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-32 text-center">Cantidad</th>
+                    <th class="p-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Modelo</th>
+                    <th class="p-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Serie</th>
+                    <th class="p-4 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-50">
+                  <tr v-for="(item, index) in form.inventario" :key="index" class="hover:bg-zinc-50/50 transition-colors">
+                    <td class="p-3">
+                      <Input v-model="item.descripcion" placeholder="Ej: Cable UTP Cat6" class="border-transparent bg-transparent focus:bg-white" />
+                    </td>
+                    <td class="p-3">
+                      <Input v-model.number="item.cantidad" type="number" @input="updateInventarioItem(index)" class="text-center" />
+                    </td>
+                    <td class="p-3 text-right">
+                     <Input v-model="item.modelo" placeholder="Modelo JKL 10" class="border-transparent bg-transparent focus:bg-white" />
+                    </td>
+                    <td class="p-3 text-right text-zinc-700">
+                      <Input v-model="item.serie" placeholder="Serie X4K52" class="border-transparent bg-transparent focus:bg-white" />
+                    </td>
+                    <td class="p-3 text-right text-zinc-700">
+                      <button @click="removeInventarioItem(index)" class="text-zinc-300 hover:text-red-500 transition-colors">
+                        <Trash2 class="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="form.inventario.length === 0">
+                    <td colspan="5" class="p-12 text-center text-zinc-400 italic text-sm">No se han registrado materiales para este servicio.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div class="xl:col-span-12">
+        <Card class="border-none shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-8 border-b border-zinc-100 pb-4">
+              <div class="p-2.5 bg-red-100 rounded-xl">
+                <PenTool class="w-5 h-5 text-red-600" />
+              </div>
+              <h2 class="text-lg font-bold text-zinc-800 uppercase tracking-wider">Formalización</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="space-y-3">
+                <div class="flex justify-between items-end px-1">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Firma del Cliente</label>
+                  <Button variant="ghost" size="sm" @click="clearClienteSignature" class="text-red-500 hover:bg-red-50 h-7 text-[10px] font-bold">REINICIAR</Button>
+                </div>
+                <div class="border-2 border-dashed border-zinc-200 rounded-2xl overflow-hidden bg-white">
+                  <canvas ref="clienteCanvasRef" height="180" class="w-full cursor-crosshair"></canvas>
+                </div>
+                <p class="text-center text-[10px] text-zinc-400 italic">Al firmar, el cliente acepta el servicio realizado</p>
+              </div>
+
+              <div class="space-y-3">
+                <div class="flex justify-between items-end px-1">
+                  <label class="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Firma del Técnico</label>
+                  <Button variant="ghost" size="sm" @click="clearTecnicoSignature" class="text-red-500 hover:bg-red-50 h-7 text-[10px] font-bold">REINICIAR</Button>
+                </div>
+                <div class="border-2 border-dashed border-zinc-200 rounded-2xl overflow-hidden bg-white">
+                  <canvas ref="tecnicoCanvasRef" height="180" class="w-full cursor-crosshair"></canvas>
+                </div>
+                <p class="text-center text-[10px] text-zinc-400 italic">Firma de validación interna</p>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
 
-    <!-- A. Detalle de la Visita -->
-    <Card data-testid="section-orden">
-      <template #default>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-primary/10 rounded-lg">
-            <FileText class="w-5 h-5 text-primary" />
-          </div>
-          <h2 class="font-heading font-semibold text-lg">Detalle de la Visita</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Número de Orden</label>
-            <Input :model-value="ordenId" disabled class="bg-zinc-50 font-mono" data-testid="orden-id" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Técnico Asignado</label>
-            <Select v-model="form.tecnico" :options="tecnicosOptions" data-testid="visita-tecnico" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Fecha de Asignación</label>
-            <Input v-model="form.fechaAsignacion" type="date" data-testid="visita-fecha-asignacion" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Hora de Visita</label>
-            <Input v-model="form.horaVisita" type="time" data-testid="visita-hora-visita" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Tipo de Inspección *</label>
-            <Select v-model="form.tipoVisita" :options="tiposOptions" placeholder="Seleccionar"
-              data-testid="visita-tipo" />
-          </div>
-
-          <div class="sm:col-span-3">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Solicitud</label>
-            <Input v-model="form.solicitud" type="text" placeholder="Breve descripción de la solicitud"
-              data-testid="visita-solicitud" />
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <!-- B. Datos del Cliente -->
-    <Card data-testid="section-cliente">
-      <template #default>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-blue-100 rounded-lg">
-            <User class="w-5 h-5 text-blue-600" />
-          </div>
-          <h2 class="font-heading font-semibold text-lg">Datos del Cliente</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Nombre del Cliente</label>
-            <Input v-model="form.clienteNombre" type="text" placeholder="Nombre completo"
-              data-testid="cliente-nombre" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Teléfono</label>
-            <Input v-model="form.clienteTelefono" type="text" placeholder="Teléfono" data-testid="cliente-telefono" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Contácto</label>
-            <Input v-model="form.clienteContacto" type="text" placeholder="Nombre de contacto"
-              data-testid="cliente-contacto" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Tipo de cliente</label>
-            <Input v-model="form.clienteTipo" type="text" placeholder="Particular / Empresa / Otro"
-              data-testid="cliente-tipo" />
-          </div>
-
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Dirección</label>
-            <Input v-model="form.direccion" type="text" placeholder="Dirección del cliente"
-              data-testid="cliente-direccion" />
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <!-- C. Datos de Inspección -->
-    <Card data-testid="section-inspeccion">
-      <template #default>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-green-100 rounded-lg">
-            <Clipboard class="w-5 h-5 text-green-600" />
-          </div>
-          <h2 class="font-heading font-semibold text-lg">Datos de Inspección</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <div class="sm:col-span-3">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Descripción del Problema</label>
-            <Input v-model="form.descripcionProblema" type="text" placeholder="Descripción del problema reportado"
-              data-testid="inspeccion-descripcion" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Hora Entrada</label>
-            <Input v-model="form.horaEntrada" type="time" data-testid="inspeccion-hora-entrada" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Hora Salida</label>
-            <Input v-model="form.horaSalida" type="time" data-testid="inspeccion-hora-salida" />
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <!-- D. Resultado de la visita -->
-    <Card data-testid="section-resultado">
-      <template #default>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-indigo-100 rounded-lg">
-            <FileText class="w-5 h-5 text-indigo-600" />
-          </div>
-          <h2 class="font-heading font-semibold text-lg">Resultado de la Visita</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Resultado de la visita</label>
-            <Input v-model="form.resultadoVisita" type="text"
-              placeholder="Ej: Solucionado / Pendiente / Requiere repuestos" data-testid="resultado-visita" />
-          </div>
-
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Recomendaciones</label>
-            <Input v-model="form.recomendaciones" type="text" placeholder="Recomendaciones al cliente"
-              data-testid="recomendaciones" />
-          </div>
-
-          <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Detalles de facturación</label>
-            <Input v-model="form.detallesFacturacion" type="text" placeholder="Detalle para facturación"
-              data-testid="detalles-facturacion" />
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <!-- Section: Inventario (mantener tal cual) -->
-    <Card data-testid="section-inventario">
-      <template #default>
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-yellow-100 rounded-lg">
-              <Package class="w-5 h-5 text-yellow-600" />
-            </div>
-            <h2 class="font-heading font-semibold text-lg">Inventario / Materiales</h2>
-          </div>
-          <Button variant="outline" size="sm" @click="addInventarioItem" data-testid="add-item-btn">
-            <Plus class="w-4 h-4 mr-1" />
-            Agregar Item
-          </Button>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full" v-if="form.inventario.length > 0">
-            <thead>
-              <tr class="border-b border-zinc-200">
-                <th class="text-left text-xs font-medium text-zinc-500 uppercase py-2 px-2">Descripción</th>
-                <th class="text-center text-xs font-medium text-zinc-500 uppercase py-2 px-2 w-24">Cant.</th>
-                <th class="text-right text-xs font-medium text-zinc-500 uppercase py-2 px-2 w-32">P. Unit</th>
-                <th class="text-right text-xs font-medium text-zinc-500 uppercase py-2 px-2 w-32">Total</th>
-                <th class="w-12"></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-100">
-              <tr v-for="(item, index) in form.inventario" :key="index">
-                <td class="py-2 px-2">
-                  <Input v-model="item.item" placeholder="Nombre del item" class="text-sm"
-                    :data-testid="`item-desc-${index}`" />
-                </td>
-                <td class="py-2 px-2">
-                  <Input v-model.number="item.cantidad" type="number" min="1" class="text-sm text-center"
-                    @input="updateInventarioItem(index)" :data-testid="`item-cant-${index}`" />
-                </td>
-                <td class="py-2 px-2">
-                  <Input v-model.number="item.precioUnit" type="number" min="0" class="text-sm text-right"
-                    @input="updateInventarioItem(index)" :data-testid="`item-precio-${index}`" />
-                </td>
-                <td class="py-2 px-2 text-right font-medium text-sm">
-                  {{ formatCurrency(item.total) }}
-                </td>
-                <td class="py-2 px-2">
-                  <button class="p-1 hover:bg-red-50 rounded" @click="removeInventarioItem(index)"
-                    :data-testid="`remove-item-${index}`">
-                    <Trash2 class="w-4 h-4 text-red-500" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <p v-else class="text-center py-8 text-zinc-500 text-sm">
-            No hay items en el inventario. Click en "Agregar Item" para comenzar.
-          </p>
-        </div>
-      </template>
-    </Card>
-
-    <!-- Section: Firmas (mantener tal cual) -->
-    <Card data-testid="section-firmas">
-      <template #default>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="p-2 bg-red-100 rounded-lg">
-            <PenTool class="w-5 h-5 text-red-600" />
-          </div>
-          <h2 class="font-heading font-semibold text-lg">Firmas</h2>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <!-- Firma Cliente -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="text-sm font-medium text-zinc-700">Firma del Cliente</label>
-              <Button variant="ghost" size="sm" @click="clearClienteSignature">Limpiar</Button>
-            </div>
-            <div class="border border-zinc-200 rounded-lg overflow-hidden bg-white">
-              <canvas ref="clienteCanvasRef" width="400" height="150" class="w-full"
-                data-testid="firma-cliente"></canvas>
-            </div>
-          </div>
-
-          <!-- Firma Técnico -->
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="text-sm font-medium text-zinc-700">Firma del Técnico</label>
-              <Button variant="ghost" size="sm" @click="clearTecnicoSignature">Limpiar</Button>
-            </div>
-            <div class="border border-zinc-200 rounded-lg overflow-hidden bg-white">
-              <canvas ref="tecnicoCanvasRef" width="400" height="150" class="w-full"
-                data-testid="firma-tecnico"></canvas>
-            </div>
-          </div>
-        </div>
-      </template>
-    </Card>
-
-    <!-- Footer Actions -->
-    <div class="flex justify-end gap-3 pt-4">
-      <Button variant="outline" @click="router.back()">Cancelar</Button>
-      <Button @click="handleSubmit" data-testid="submit-visita-btn">
-        <Save class="w-4 h-4 mr-2" />
-        Guardar y Finalizar
+    <div class="flex justify-end gap-4 mt-12 pb-12">
+      <Button variant="outline" size="lg" @click="router.back()" class="font-bold border-zinc-300 px-8">Cancelar</Button>
+      <Button size="lg" @click="handleSubmit" class="bg-primary text-white font-bold hover:bg-zinc-800 hover:translate-y-[-2px] transition-all">
+        <Save class="w-5 h-5 mr-2" />
+        GUARDAR
       </Button>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Eliminar spinners de inputs numéricos */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+canvas {
+  touch-action: none; /* Mejor soporte para tablets/móviles */
+}
+
+.sticky {
+  position: sticky;
+  top: 2rem;
+}
+</style>
