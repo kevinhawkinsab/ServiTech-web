@@ -1,9 +1,9 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import { useCitasStore } from '../../../stores/citas'
 import { useVisitasStore } from '../../../stores/visitas'
 import { useAuthStore } from '../../../stores/auth'
@@ -11,30 +11,23 @@ import Card from '../../../components/ui/Card.vue'
 import Badge from '../../../components/ui/Badge.vue'
 import CitaModal from '../components/CitaModal.vue'
 import { GripVertical, AlertCircle } from 'lucide-vue-next'
-import draggable from 'vuedraggable'
 
 const citasStore = useCitasStore()
 const visitasStore = useVisitasStore()
 const authStore = useAuthStore()
 
-// Modal state
+// Refs / estado
 const showCitaModal = ref(false)
 const selectedCita = ref(null)
 const prefillDate = ref('')
 const prefillTime = ref('')
+const tempTaskId = ref(null)
 
-// Calendar events
-const calendarEvents = computed(() => {
-  return citasStore.citas.map(cita => ({
-    id: cita.id,
-    title: cita.asunto,
-    start: `${cita.fecha}T${cita.hora}`,
-    extendedProps: { ...cita },
-    backgroundColor: getEventColor(cita.estado),
-    borderColor: getEventColor(cita.estado)
-  }))
-})
+// Referencia al contenedor de eventos externos (para Draggable)
+const externalEventsRef = ref(null)
+let draggableInstance = null
 
+// Helpers
 const getEventColor = (estado) => {
   const colors = {
     pendiente: '#fbbf24',
@@ -45,7 +38,187 @@ const getEventColor = (estado) => {
   return colors[estado] || '#71717a'
 }
 
-// Calendar options
+const getPrioridadBadge = (prioridad) => {
+  // Ajusta según tus variantes reales (este devuelve 'destructive'/'warning' según tu store/ui)
+  if (!prioridad) return 'secondary'
+  const p = String(prioridad).toLowerCase()
+  if (p === 'alta') return 'destructive'
+  if (p === 'media') return 'warning'
+  return 'secondary'
+}
+
+// Eventos del calendario (reactivos)
+const calendarEvents = computed(() =>
+  citasStore.citas.map(cita => ({
+    id: cita.id,
+    title: cita.asunto,
+    start: `${cita.fecha}T${cita.hora}`,
+    extendedProps: { ...cita },
+    backgroundColor: getEventColor(cita.estado),
+    borderColor: getEventColor(cita.estado)
+  }))
+)
+
+const tareasPendientes = computed(() => citasStore.tareasPendientes)
+
+// ---- Handlers (deben estar definidos antes de usar en calendarOptions) ----
+const handleDateClick = (info) => {
+  const dateStr = info.dateStr || (info.date && info.date.toISOString().split('T')[0]) || ''
+  prefillDate.value = dateStr
+  prefillTime.value = '09:00'
+  selectedCita.value = null
+  tempTaskId.value = null
+  showCitaModal.value = true
+}
+
+const handleEventClick = (info) => {
+  const cita = citasStore.getCitaById(info.event.id)
+  if (cita) {
+    selectedCita.value = { ...cita }
+    tempTaskId.value = null
+    showCitaModal.value = true
+  }
+}
+
+const handleEventDrop = (info) => {
+  const start = info.event.start
+  const newDate = start ? start.toISOString().split('T')[0] : info.event.startStr.split('T')[0]
+  const newTime = start ? start.toISOString().split('T')[1].substring(0, 5) : (info.event.startStr?.split('T')[1]?.substring(0, 5) || '09:00')
+
+  citasStore.updateCita(info.event.id, {
+    fecha: newDate,
+    hora: newTime
+  })
+
+  console.log('Cita movida:', { id: info.event.id, nuevaFecha: newDate, nuevaHora: newTime })
+}
+
+const handleExternalDrop = (info) => {
+  // Fallback (si algún navegador no integra Draggable de FullCalendar)
+  try {
+    const dt = info.jsEvent?.dataTransfer
+    if (dt) {
+      const raw = dt.getData('text/plain')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const fecha = info.date ? info.date.toISOString().split('T')[0] : (info.dateStr || '')
+        const hora = parsed.hora || '09:00'
+
+        tempTaskId.value = parsed.taskId || null
+        const tarea = citasStore.tareasPendientes.find(t => t.id === parsed.taskId)
+        selectedCita.value = {
+          asunto: parsed.title || tarea?.titulo || '',
+          fecha,
+          hora,
+          clienteNombre: tarea?.clienteNombre || '',
+          tipo: tarea?.tipo || '',
+          prioridad: tarea?.prioridad || '',
+          tecnicoId: visitasStore.tecnicos[0]?.id || '',
+          tecnicoNombre: visitasStore.tecnicos[0]?.nombre || ''
+        }
+
+        prefillDate.value = fecha
+        prefillTime.value = hora
+        showCitaModal.value = true
+      }
+    }
+  } catch (err) {
+    console.warn('handleExternalDrop fallback error:', err)
+  }
+}
+
+const handleEventReceive = (info) => {
+  // FullCalendar ha convertido el elemento externo a evento y lo entrega aquí
+  const taskId = info.event.extendedProps?.taskId || null
+  const start = info.event.start
+  const fecha = start ? start.toISOString().split('T')[0] : (info.event.startStr?.split('T')[0] || '')
+  const hora = start ? start.toISOString().split('T')[1].substring(0, 5) : (info.event.startStr?.split('T')[1]?.substring(0, 5) || '09:00')
+
+  if (taskId) {
+    const tarea = citasStore.tareasPendientes.find(t => t.id === taskId)
+
+    selectedCita.value = {
+      asunto: tarea?.titulo || info.event.title || '',
+      fecha,
+      hora,
+      clienteNombre: tarea?.clienteNombre || '',
+      tipo: tarea?.tipo || '',
+      prioridad: tarea?.prioridad || '',
+      estado: 'pendiente',
+      tecnicoId: visitasStore.tecnicos[0]?.id || '',
+      tecnicoNombre: visitasStore.tecnicos[0]?.nombre || ''
+    }
+
+    tempTaskId.value = taskId
+
+    // también actualizar prefill (por si el modal usa esos props)
+    prefillDate.value = fecha
+    prefillTime.value = hora
+
+    showCitaModal.value = true
+
+    // removemos el evento temporal (recrearemos al guardar)
+    try { info.event.remove() } catch (e) { /* ignore */ }
+  } else {
+    // sin taskId: abrir modal con los datos mínimos
+    selectedCita.value = {
+      asunto: info.event.title || '',
+      fecha,
+      hora,
+      clienteNombre: '',
+      tipo: '',
+      prioridad: '',
+      tecnicoId: visitasStore.tecnicos[0]?.id || '',
+      tecnicoNombre: visitasStore.tecnicos[0]?.nombre || ''
+    }
+    tempTaskId.value = null
+    prefillDate.value = fecha
+    prefillTime.value = hora
+    showCitaModal.value = true
+    try { info.event.remove() } catch (e) { /* ignore */ }
+  }
+}
+
+const handleSaveCita = (citaData) => {
+  if (selectedCita.value && selectedCita.value.id) {
+    citasStore.updateCita(selectedCita.value.id, citaData)
+    tempTaskId.value = null
+  } else if (tempTaskId.value) {
+    const tarea = citasStore.tareasPendientes.find(t => t.id === tempTaskId.value)
+    if (tarea) {
+      citasStore.convertTareaToCita(
+        tarea,
+        citaData.fecha,
+        citaData.hora,
+        citaData.tecnicoId || visitasStore.tecnicos[0]?.id || 'TEC-001',
+        citaData.tecnicoNombre || visitasStore.tecnicos[0]?.nombre || 'Técnico Asignado'
+      )
+      // Si quieres que se copien otros campos (clienteNombre, prioridad, etc.)
+      // asegúrate de que convertTareaToCita lo soporte, o busca la cita creada y actualízala.
+    }
+    tempTaskId.value = null
+  } else {
+    citasStore.addCita(citaData)
+  }
+
+  showCitaModal.value = false
+  selectedCita.value = null
+}
+
+const handleDragStart = (event, tarea) => {
+  try {
+    event.dataTransfer.setData('text/plain', JSON.stringify({
+      taskId: tarea.id,
+      title: tarea.titulo,
+      tipo: tarea.tipo,
+      hora: tarea.hora || '09:00'
+    }))
+  } catch (e) {
+    // ignore
+  }
+}
+
+// ---- Ahora definimos calendarOptions (usa los handlers ya declarados) ----
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
@@ -72,106 +245,44 @@ const calendarOptions = computed(() => ({
   }
 }))
 
-// Tareas pendientes para drag & drop
-const tareasPendientes = computed(() => citasStore.tareasPendientes)
-
-// Handlers
-const handleDateClick = (info) => {
-  // Click en día vacío -> abrir modal con fecha prellenada
-  prefillDate.value = info.dateStr
-  prefillTime.value = '09:00'
-  selectedCita.value = null
-  showCitaModal.value = true
-}
-
-const handleEventClick = (info) => {
-  // Click en evento -> abrir modal con datos
-  const cita = citasStore.getCitaById(info.event.id)
-  if (cita) {
-    selectedCita.value = { ...cita }
-    showCitaModal.value = true
-  }
-}
-
-const handleEventDrop = (info) => {
-  // Arrastrar evento existente a nueva fecha
-  const newDate = info.event.startStr.split('T')[0]
-  const newTime = info.event.startStr.split('T')[1]?.substring(0, 5) || '09:00'
-  
-  citasStore.updateCita(info.event.id, {
-    fecha: newDate,
-    hora: newTime
-  })
-  
-  console.log('Cita movida:', {
-    id: info.event.id,
-    nuevaFecha: newDate,
-    nuevaHora: newTime
-  })
-}
-
-const handleExternalDrop = (info) => {
-  // Tarea soltada en calendario
-  console.log('Drop externo detectado:', info)
-}
-
-const handleEventReceive = (info) => {
-  // Cuando se recibe un evento externo
-  const taskId = info.event.extendedProps?.taskId
-  if (taskId) {
-    const tarea = citasStore.tareasPendientes.find(t => t.id === taskId)
-    if (tarea) {
-      const fecha = info.event.startStr.split('T')[0]
-      const hora = info.event.startStr.split('T')[1]?.substring(0, 5) || '09:00'
-      
-      // Convertir tarea a cita
-      citasStore.convertTareaToCita(
-        tarea,
-        fecha,
-        hora,
-        visitasStore.tecnicos[0]?.id || 'TEC-001',
-        visitasStore.tecnicos[0]?.nombre || 'Técnico Asignado'
-      )
-      
-      // Remover el evento temporal creado por FullCalendar
-      info.event.remove()
+// Inicializar Draggable para FullCalendar (external events)
+onMounted(() => {
+  if (externalEventsRef.value) {
+    try {
+      draggableInstance = new Draggable(externalEventsRef.value, {
+        itemSelector: '.fc-event',
+        eventData: (eventEl) => {
+          const raw = eventEl.getAttribute('data-event')
+          if (!raw) {
+            return { title: eventEl.innerText.trim() }
+          }
+          try {
+            return JSON.parse(raw)
+          } catch (e) {
+            return { title: eventEl.innerText.trim() }
+          }
+        }
+      })
+    } catch (err) {
+      console.warn('Draggable init failed:', err)
     }
   }
-}
+})
 
-const handleSaveCita = (citaData) => {
-  if (selectedCita.value?.id) {
-    citasStore.updateCita(selectedCita.value.id, citaData)
-  } else {
-    citasStore.addCita(citaData)
-  }
-  showCitaModal.value = false
-}
-
-const getPrioridadBadge = (prioridad) => {
-  const variants = {
-    alta: 'destructive',
-    media: 'warning',
-    baja: 'secondary'
-  }
-  return variants[prioridad] || 'secondary'
-}
-
-// Drag start for external events
-const handleDragStart = (event, tarea) => {
-  event.dataTransfer.setData('text/plain', JSON.stringify({
-    taskId: tarea.id,
-    title: tarea.titulo,
-    tipo: tarea.tipo
-  }))
-}
+onUnmounted(() => {
+  try {
+    if (draggableInstance && typeof draggableInstance.destroy === 'function') {
+      draggableInstance.destroy()
+    }
+  } catch (e) { /* ignore */ }
+})
 </script>
 
 <template>
   <div class="space-y-4" data-testid="calendario-page">
     <!-- Header -->
     <div>
-      <h1 class="font-heading text-2xl font-bold text-zinc-900">Calendario de Citas</h1>
+      <h1 class="font-heading text-lg font-bold text-zinc-900">Calendario de Citas</h1>
       <p class="text-sm text-zinc-500">Arrastra tareas pendientes al calendario para programar citas</p>
     </div>
 
@@ -181,21 +292,18 @@ const handleDragStart = (event, tarea) => {
         <template #header-actions>
           <Badge>{{ tareasPendientes.length }}</Badge>
         </template>
-        
-        <div class="space-y-2">
+
+        <!-- Contenedor con ref para Draggable -->
+        <div ref="externalEventsRef" class="space-y-2">
           <p v-if="tareasPendientes.length === 0" class="text-sm text-zinc-500 text-center py-4">
             No hay tareas pendientes
           </p>
-          
-          <div
-            v-for="tarea in tareasPendientes"
-            :key="tarea.id"
+
+          <div v-for="tarea in tareasPendientes" :key="tarea.id"
             class="fc-event p-3 bg-zinc-50 border border-zinc-200 rounded-lg cursor-grab hover:bg-zinc-100 hover:border-primary/50 transition-all"
-            draggable="true"
-            @dragstart="handleDragStart($event, tarea)"
+            draggable="true" @dragstart="handleDragStart($event, tarea)"
             :data-event="JSON.stringify({ title: tarea.titulo, taskId: tarea.id, duration: '01:00' })"
-            :data-testid="`tarea-${tarea.id}`"
-          >
+            :data-testid="`tarea-${tarea.id}`">
             <div class="flex items-start gap-2">
               <GripVertical class="w-4 h-4 text-zinc-400 mt-0.5 flex-shrink-0" />
               <div class="flex-1 min-w-0">
@@ -229,13 +337,8 @@ const handleDragStart = (event, tarea) => {
     </div>
 
     <!-- Modal -->
-    <CitaModal
-      v-model="showCitaModal"
-      :cita="selectedCita"
-      :prefill-date="prefillDate"
-      :prefill-time="prefillTime"
-      @save="handleSaveCita"
-    />
+    <CitaModal v-model="showCitaModal" :cita="selectedCita" :prefill-date="prefillDate" :prefill-time="prefillTime"
+      @save="handleSaveCita" />
   </div>
 </template>
 

@@ -77,7 +77,7 @@ const navigate = (routeName) => {
 <template>
   <aside
     :class="[
-      'fixed top-0 left-0 z-50 h-full bg-white border-r border-zinc-200 transition-all duration-300',
+      'fixed top-0 left-0 z-50 h-full bg-zinc-900 border-r border-zinc-200 transition-all duration-300',
       collapsed ? 'w-16' : 'w-64',
       mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]"
@@ -91,7 +91,7 @@ const navigate = (routeName) => {
         </div>
         <span
           v-if="!collapsed"
-          class="font-heading font-bold text-zinc-900 whitespace-nowrap"
+          class="font-heading font-bold text-white whitespace-nowrap"
         >
           Servicio Técnico
         </span>
@@ -103,7 +103,7 @@ const navigate = (routeName) => {
         @click="$emit('close-mobile')"
         data-testid="close-mobile-menu"
       >
-        <X class="w-5 h-5" />
+        <X class="w-5 h-5 text-white" />
       </button>
       
       <!-- Desktop Toggle -->
@@ -112,8 +112,8 @@ const navigate = (routeName) => {
         @click="$emit('toggle')"
         data-testid="toggle-sidebar"
       >
-        <ChevronLeft v-if="!collapsed" class="w-5 h-5" />
-        <ChevronRight v-else class="w-5 h-5" />
+        <ChevronLeft v-if="!collapsed" class="w-5 h-5 text-white" />
+        <ChevronRight v-else class="w-5 h-5 text-white" />
       </button>
     </div>
 
@@ -126,7 +126,7 @@ const navigate = (routeName) => {
           'w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
           isActive(item.route)
             ? 'bg-primary text-white'
-            : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
+            : 'text-white hover:bg-zinc-100 hover:text-zinc-900'
         ]"
         @click="navigate(item.route)"
         :data-testid="`nav-${item.route}`"

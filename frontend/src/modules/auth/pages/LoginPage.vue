@@ -81,7 +81,7 @@ const fillDemo = (account) => {
         </div>
 
         <div class="mb-8">
-          <h2 class="font-heading text-2xl font-bold text-zinc-900 mb-2">Iniciar Sesión</h2>
+          <h2 class="font-heading text-lg font-bold text-zinc-900 mb-2">Iniciar Sesión</h2>
           <p class="text-zinc-500">Ingresa tus credenciales para acceder al sistema</p>
         </div>
 

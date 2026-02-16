@@ -124,7 +124,7 @@ const clearFilters = () => {
   <div class="space-y-4" data-testid="historial-page">
     <!-- Header -->
     <div>
-      <h1 class="font-heading text-2xl font-bold text-zinc-900">Historial de Visitas</h1>
+      <h1 class="font-heading text-lg font-bold text-zinc-900">Historial de Visitas</h1>
       <p class="text-sm text-zinc-500">Consulta y descarga reportes de visitas técnicas</p>
     </div>
 
