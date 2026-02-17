@@ -61,7 +61,7 @@ const fillDemo = (account) => {
           <span class="font-heading text-2xl font-bold text-white">Servicio Técnico</span>
         </div>
         <h1 class="font-heading text-4xl font-bold text-white mb-4">
-          Gestión de Mantenimiento y Visitas en Terreno
+          Gestión de Mantenimiento y Visitas en Campo
         </h1>
         <p class="text-zinc-400 text-lg">
           Sistema integral para la administración de citas, visitas técnicas e historial de servicios.
